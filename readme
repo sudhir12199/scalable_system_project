@@ -1,0 +1,40 @@
+
+Build & Push Docker Images
+
+docker build -t sudhir/customer-service:latest ./customer-service
+docker push sudhir/customer-service:latest
+
+docker build -t sudhir/account-service:latest ./account-service
+docker push sudhir/account-service:latest
+
+docker build -t sudhir/transaction-service:latest ./transaction-service
+docker push sudhir/transaction-service:latest
+
+docker build -t sudhir/notification-service:latest ./notification-service
+docker push sudhir/notification-service:latest
+
+Deploy on Kubernetes
+
+kubectl apply -f k8s/customer-deployment.yaml
+kubectl apply -f k8s/account-deployment.yaml
+kubectl apply -f k8s/transaction-deployment.yaml
+kubectl apply -f k8s/notification-deployment.yaml
+
+kubectl apply -f k8s/customer-service.yaml
+kubectl apply -f k8s/account-service.yaml
+kubectl apply -f k8s/transaction-service.yaml
+kubectl apply -f k8s/notification-service.yaml
+
+# Optional ingress
+kubectl apply -f k8s/ingress.yaml
+
+Verify
+kubectl get pods
+kubectl get services
+kubectl get deployments
+kubectl describe service customer-service
+
+Access
+minikube service customer-service --url
+
+
