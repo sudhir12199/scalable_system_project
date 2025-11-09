@@ -1,0 +1,15 @@
+const NotificationService={
+  enqueue(msg){
+    const item={msg,ts:new Date().toLocaleTimeString()};
+    DB.notif.push(item);
+    log(`🔔 Notification queued: ${msg}`);
+    this.deliver(item);
+  },
+  deliver(item){
+    setTimeout(()=>log(`📨 Notification sent → ${item.msg}`),600);
+  },
+  showLog(){
+    const out=DB.notif.slice(-20).map(n=>`[${n.ts}] ${n.msg}`).join('\n');
+    document.getElementById('notif_log').textContent=out||'No notifications.';
+  }
+};
