@@ -1,0 +1,27 @@
+const TransactionService={
+  transfer(){
+    const from=document.getElementById('from_acc').value,
+          to=document.getElementById('to_acc').value,
+          amt=parseFloat(document.getElementById('tx_amount').value)||0;
+    const id=`txn-${txCounter++}`;
+    log(`💸 Transaction Service: Initiating ${id} ₹${amt} ${from}→${to}`);
+    const fa=DB.accounts[from], ta=DB.accounts[to];
+    if(!fa||!ta){ log(`❌ Transaction Service: Invalid accounts`); return; }
+    if(fa.type==='basic' && fa.balance<amt){
+      log(`⚠️ Account Service: INSUFFICIENT FUNDS in ${from}`); return;
+    }
+    // Debit/Credit entries (idempotent simulation)
+    const debit={id,acc:from,type:'DEBIT',amount:amt,ts:new Date().toISOString()};
+    const credit={id,acc:to,type:'CREDIT',amount:amt,ts:new Date().toISOString()};
+    fa.balance-=amt; ta.balance+=amt;
+    DB.txns.push(debit,credit);
+    log(` Transaction Service: Debit ${from}, Credit ${to}`);
+    log(` New Balances → ${from}:₹${fa.balance}, ${to}:₹${ta.balance}`);
+    if(amt>2000) NotificationService.enqueue(`High-value transfer ₹${amt} from ${from}`);
+    document.getElementById('txn_output').textContent=`Transfer complete (${id})`;
+  },
+  statement(){
+    const lines=DB.txns.slice(-10).map(t=>`${t.ts.split('T')[1].slice(0,8)} ${t.acc} ${t.type} ₹${t.amount}`).join('\n');
+    document.getElementById('txn_output').textContent=lines||'No transactions yet.';
+  }
+};
