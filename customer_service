@@ -1,0 +1,34 @@
+const CustomerService={
+  create(){
+    const id=`cust-${custCounter++}`;
+    const c={
+      id,
+      name:document.getElementById('cust_name').value||'Unnamed',
+      email:document.getElementById('cust_email').value||'none@example.com',
+      phone:document.getElementById('cust_phone').value||'0000000000',
+      kyc_status:'PENDING',
+      created_at:new Date().toISOString()
+    };
+    DB.customers[id]=c;
+    log(`🧍 Customer Service: Created ${id} (${c.name})`);
+    document.getElementById('cust_output').textContent=`Customer created: ${id}`;
+    NotificationService.enqueue(`Welcome ${c.name}! Your customer ID is ${id}.`);
+  },
+  list(){
+    const data=Object.values(DB.customers).map(c=>`${c.id} - ${c.name} (${c.kyc_status})`).join('\n');
+    document.getElementById('cust_output').textContent=data||'No customers.';
+  },
+  updateKYC(id,status){
+    if(DB.customers[id]){
+      DB.customers[id].kyc_status=status;
+      log(`Customer Service: Updated ${id} KYC → ${status}`);
+      NotificationService.enqueue(`KYC status for ${id} is now ${status}.`);
+    }
+  },
+  delete(id){
+    if(DB.customers[id]){
+      delete DB.customers[id];
+      log(`Customer Service: Deleted ${id}`);
+    }
+  }
+};
