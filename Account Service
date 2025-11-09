@@ -1,0 +1,20 @@
+const AccountService={
+  create(){
+    const cust=document.getElementById('acc_cust').value;
+    if(!DB.customers[cust]) return log(`❌ Account Service: Customer ${cust} not found`);
+    const id=`acc-${accCounter++}`;
+    const type=document.getElementById('acc_type').value;
+    const bal=parseFloat(document.getElementById('acc_balance').value)||0;
+    DB.accounts[id]={id,customer_id:cust,type,balance:bal,status:'ACTIVE'};
+    log(`🏦 Account Service: Created ${id} (${type}) for ${cust} with ₹${bal}`);
+    document.getElementById('acc_output').textContent=`Account ${id} created for ${cust}`;
+  },
+  get(id){ return DB.accounts[id]; },
+  getAll(){
+    const data=Object.values(DB.accounts).map(a=>`${a.id} [${a.type}] Bal:₹${a.balance}`).join('\n');
+    document.getElementById('acc_output').textContent=data||'No accounts.';
+  },
+  close(id){
+    if(DB.accounts[id]){ DB.accounts[id].status='CLOSED'; log(`Account Service: Closed ${id}`); }
+  }
+};
