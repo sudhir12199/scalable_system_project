@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>🏦 Banking Microservices Suite — Customer | Account | Transaction | Notification</title>
+<style>
+  body{font-family:"Segoe UI",Roboto,sans-serif;background:#f9fafb;margin:0;color:#111827}
+  header{background:#1d4ed8;color:white;padding:18px 24px}
+  h1{margin:0;font-size:1.6rem}
+  main{display:flex;flex-wrap:wrap;gap:20px;padding:20px}
+  .service{background:#fff;border-radius:10px;box-shadow:0 3px 8px rgba(0,0,0,.08);
+           flex:1;min-width:320px;padding:18px}
+  h2{margin-top:0;color:#1e3a8a;border-bottom:2px solid #e0e7ff;padding-bottom:4px}
+  label{display:block;margin-top:10px;font-weight:600}
+  input,select{width:100%;padding:8px;margin-top:4px;border:1px solid #cbd5e1;
+               border-radius:6px;font-size:.95rem}
+  button{margin-top:12px;background:#2563eb;color:white;border:none;
+         border-radius:6px;padding:8px 14px;cursor:pointer;font-weight:600}
+  button:hover{background:#1e40af}
+  #log{height:400px;overflow-y:auto;background:#0f172a;color:#d1d5db;padding:10px;
+       border-radius:8px;font-family:monospace;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏦 Banking Microservices — Full Simulation</h1>
+  <p>Customer • Account • Transaction • Notification</p>
+</header>
+
+<main>
+  <!-- CUSTOMER SERVICE -->
+  <div class="service" id="customerService">
+    <h2>Customer Service</h2>
+    <p>CRUD for customer profiles and KYC status.</p>
+    <label>Name</label><input id="cust_name" placeholder="Alice"/>
+    <label>Email</label><input id="cust_email" placeholder="alice@example.com"/>
+    <label>Phone</label><input id="cust_phone" placeholder="9876543210"/>
+    <button onclick="CustomerService.create()">➕ Create Customer</button>
+    <button onclick="CustomerService.list()">📋 List Customers</button>
+    <pre id="cust_output"></pre>
+  </div>
+
+  <!-- ACCOUNT SERVICE -->
+  <div class="service" id="accountService">
+    <h2>Account Service</h2>
+    <p>Create / close accounts, fetch balances, change status.</p>
+    <label>Customer ID</label><input id="acc_cust" placeholder="cust-1"/>
+    <label>Account Type</label>
+    <select id="acc_type"><option>basic</option><option>premium</option></select>
+    <label>Initial Balance</label><input id="acc_balance" value="1000"/>
+    <button onclick="AccountService.create()">🏦 Create Account</button>
+    <button onclick="AccountService.getAll()">📋 List Accounts</button>
+    <pre id="acc_output"></pre>
+  </div>
+
+  <!-- TRANSACTION SERVICE -->
+  <div class="service" id="txnService">
+    <h2>Transaction Service</h2>
+    <p>Deposits, withdrawals, transfers; fetch statements.</p>
+    <label>From</label><input id="from_acc" placeholder="acc-1"/>
+    <label>To</label><input id="to_acc" placeholder="acc-2"/>
+    <label>Amount</label><input id="tx_amount" value="100"/>
+    <button onclick="TransactionService.transfer()">💸 Transfer</button>
+    <button onclick="TransactionService.statement()">📄 Statement</button>
+    <pre id="txn_output"></pre>
+  </div>
+
+  <!-- NOTIFICATION SERVICE -->
+  <div class="service" id="notifyService">
+    <h2>Notification Service</h2>
+    <p>Sends alerts for high-value transactions and status changes.</p>
+    <button onclick="NotificationService.showLog()">📜 View Notification Log</button>
+    <div id="notif_log" style="height:300px;overflow-y:auto;background:#0f172a;
+         color:#d1d5db;padding:8px;border-radius:6px;font-family:monospace;font-size:13px;"></div>
+  </div>
+</main>
+
+<!-- Shared Log -->
+<section style="padding:0 20px 20px 20px;">
+  <h2>📡 System Log</h2>
+  <div id="log"></div>
+</section>
+
+<script>
+/* -------------------- Data Stores -------------------- */
+const DB = { customers:{}, accounts:{}, txns:[], notif:[] };
+let custCounter=1, accCounter=1, txCounter=1;
+
+/* -------------------- Utility Logger -------------------- */
+const logEl=document.getElementById('log');
+function log(msg){
+  const ts=new Date().toLocaleTimeString();
+  const line=`[${ts}] ${msg}`;
+  const div=document.createElement('div');
+  div.innerHTML=line;
+  logEl.prepend(div);
+  console.log(line);
+}
+
+/* -------------------- CUSTOMER SERVICE -------------------- */
+const CustomerService={
+  create(){
+    const id=`cust-${custCounter++}`;
+    const c={
+      id,
+      name:document.getElementById('cust_name').value||'Unnamed',
+      email:document.getElementById('cust_email').value||'none@example.com',
+      phone:document.getElementById('cust_phone').value||'0000000000',
+      kyc_status:'PENDING',
+      created_at:new Date().toISOString()
+    };
+    DB.customers[id]=c;
+    log(`🧍 Customer Service: Created ${id} (${c.name})`);
+    document.getElementById('cust_output').textContent=`Customer created: ${id}`;
+    NotificationService.enqueue(`Welcome ${c.name}! Your customer ID is ${id}.`);
+  },
+  list(){
+    const data=Object.values(DB.customers).map(c=>`${c.id} - ${c.name} (${c.kyc_status})`).join('\n');
+    document.getElementById('cust_output').textContent=data||'No customers.';
+  },
+  updateKYC(id,status){
+    if(DB.customers[id]){
+      DB.customers[id].kyc_status=status;
+      log(`Customer Service: Updated ${id} KYC → ${status}`);
+      NotificationService.enqueue(`KYC status for ${id} is now ${status}.`);
+    }
+  },
+  delete(id){
+    if(DB.customers[id]){
+      delete DB.customers[id];
+      log(`Customer Service: Deleted ${id}`);
+    }
+  }
+};
+
+/* -------------------- ACCOUNT SERVICE -------------------- */
+const AccountService={
+  create(){
+    const cust=document.getElementById('acc_cust').value;
+    if(!DB.customers[cust]) return log(`❌ Account Service: Customer ${cust} not found`);
+    const id=`acc-${accCounter++}`;
+    const type=document.getElementById('acc_type').value;
+    const bal=parseFloat(document.getElementById('acc_balance').value)||0;
+    DB.accounts[id]={id,customer_id:cust,type,balance:bal,status:'ACTIVE'};
+    log(`🏦 Account Service: Created ${id} (${type}) for ${cust} with ₹${bal}`);
+    document.getElementById('acc_output').textContent=`Account ${id} created for ${cust}`;
+  },
+  get(id){ return DB.accounts[id]; },
+  getAll(){
+    const data=Object.values(DB.accounts).map(a=>`${a.id} [${a.type}] Bal:₹${a.balance}`).join('\n');
+    document.getElementById('acc_output').textContent=data||'No accounts.';
+  },
+  close(id){
+    if(DB.accounts[id]){ DB.accounts[id].status='CLOSED'; log(`Account Service: Closed ${id}`); }
+  }
+};
+
+/* -------------------- TRANSACTION SERVICE -------------------- */
+const TransactionService={
+  transfer(){
+    const from=document.getElementById('from_acc').value,
+          to=document.getElementById('to_acc').value,
+          amt=parseFloat(document.getElementById('tx_amount').value)||0;
+    const id=`txn-${txCounter++}`;
+    log(`💸 Transaction Service: Initiating ${id} ₹${amt} ${from}→${to}`);
+    const fa=DB.accounts[from], ta=DB.accounts[to];
+    if(!fa||!ta){ log(`❌ Transaction Service: Invalid accounts`); return; }
+    if(fa.type==='basic' && fa.balance<amt){
+      log(`⚠️ Account Service: INSUFFICIENT FUNDS in ${from}`); return;
+    }
+    // Debit/Credit entries (idempotent simulation)
+    const debit={id,acc:from,type:'DEBIT',amount:amt,ts:new Date().toISOString()};
+    const credit={id,acc:to,type:'CREDIT',amount:amt,ts:new Date().toISOString()};
+    fa.balance-=amt; ta.balance+=amt;
+    DB.txns.push(debit,credit);
+    log(` Transaction Service: Debit ${from}, Credit ${to}`);
+    log(` New Balances → ${from}:₹${fa.balance}, ${to}:₹${ta.balance}`);
+    if(amt>2000) NotificationService.enqueue(`High-value transfer ₹${amt} from ${from}`);
+    document.getElementById('txn_output').textContent=`Transfer complete (${id})`;
+  },
+  statement(){
+    const lines=DB.txns.slice(-10).map(t=>`${t.ts.split('T')[1].slice(0,8)} ${t.acc} ${t.type} ₹${t.amount}`).join('\n');
+    document.getElementById('txn_output').textContent=lines||'No transactions yet.';
+  }
+};
+
+/* -------------------- NOTIFICATION SERVICE -------------------- */
+const NotificationService={
+  enqueue(msg){
+    const item={msg,ts:new Date().toLocaleTimeString()};
+    DB.notif.push(item);
+    log(`🔔 Notification queued: ${msg}`);
+    this.deliver(item);
+  },
+  deliver(item){
+    setTimeout(()=>log(`📨 Notification sent → ${item.msg}`),600);
+  },
+  showLog(){
+    const out=DB.notif.slice(-20).map(n=>`[${n.ts}] ${n.msg}`).join('\n');
+    document.getElementById('notif_log').textContent=out||'No notifications.';
+  }
+};
+
+/* -------------------- DEMO SEED -------------------- */
+(function seed(){
+  const cid=`cust-${custCounter++}`;
+  DB.customers[cid]={id:cid,name:'DemoUser',email:'demo@bank.com',phone:'9000000000',kyc_status:'VERIFIED'};
+  const a1=`acc-${accCounter++}`,a2=`acc-${accCounter++}`;
+  DB.accounts[a1]={id:a1,customer_id:cid,type:'basic',balance:1500,status:'ACTIVE'};
+  DB.accounts[a2]={id:a2,customer_id:cid,type:'premium',balance:5000,status:'ACTIVE'};
+  document.getElementById('acc_cust').value=cid;
+  document.getElementById('from_acc').value=a1;
+  document.getElementById('to_acc').value=a2;
+  log('🚀 Simulator booted with one demo customer & two accounts.');
+})();
+</script>
+</body>
+</html>
